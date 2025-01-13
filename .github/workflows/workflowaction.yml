@@ -82,26 +82,19 @@ jobs:
           path: reports
 
 
-  # Deploy container
-  Deploy_container:
+  # Deploy container and ZAP Scan
+  Deploy_container_and_ZAP_Scan:
     runs-on: ubuntu-latest
-    name: Deploy container
+    name: Deploy container and scan with ZAP
     permissions: write-all
     steps:
       - uses: actions/checkout@v3
       - name: run docker container
         run: |
           docker build -t vulnerable-app -f ./Dockerfile .
-          docker run -p 8001:8001 vulnerable-app
+          docker run -d -p 8001:8001 vulnerable-app
           sleep 12
       - run: curl -I http://localhost:8001 || exit 1
-
-  # ZAP Scan
-  zap_scan:
-    permissions: write-all
-    name: ZAP Scan
-    runs-on: ubuntu-latest
-    steps:
       - name: ZAP Scan
         uses: zaproxy/action-full-scan@v0.12.0
         with:
@@ -110,4 +103,5 @@ jobs:
           target: 'http://localhost:8001'
           cmd_options: '-a'
           issue_title: 'ZAP Scan Report'
-         
+
+

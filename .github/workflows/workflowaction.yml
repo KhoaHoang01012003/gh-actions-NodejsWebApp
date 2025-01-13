@@ -51,7 +51,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: install dependencies
-        run: npm install -g bower && npm install
+        run: |
+             npm install -g bower 
+             npm install
       - uses: oke-py/npm-audit-action@v2
         with:
           audit_level: moderate
@@ -80,9 +82,9 @@ jobs:
     name: Build App
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
       - name: Install dependencies
@@ -92,7 +94,7 @@ jobs:
       - name: Build
         run: npm start
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: build
 

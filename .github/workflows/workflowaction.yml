@@ -86,11 +86,12 @@ jobs:
   Deploy_container:
     runs-on: ubuntu-latest
     name: Deploy container
+    permissions: write-all
     steps:
       - name: run docker container
         run: |
           ls
-          docker build -t vulnerable-app -f ./docker/Dockerfile .
+          docker build -t vulnerable-app -f ./Dockerfile .
           docker run -p 8001:8001 vulnerable-app
           sleep 10
       - run: curl -I http://localhost:8001 || exit 1

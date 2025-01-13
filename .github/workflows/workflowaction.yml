@@ -89,7 +89,7 @@ jobs:
     steps:
       - name: run docker container
         run: |
-          ls -la
+          ls
           docker build -t vulnerable-app -f ./docker/Dockerfile .
           docker run -p 8001:8001 vulnerable-app
           sleep 10

@@ -93,6 +93,7 @@ jobs:
           node-version: '18.19.0'
       - name: install bower
         run: npm install -g bower
+      - run: bower install --allow-root
       - name: install dependencies
         run: npm install
       - name: Build

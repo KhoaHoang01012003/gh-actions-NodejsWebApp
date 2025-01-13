@@ -83,17 +83,27 @@ jobs:
           path: reports
 
 
-  # Deploy container and ZAP Scan
-  Deploy_container_and_ZAP_Scan:
+  # Deploy container, Container Security and ZAP Web Application Scan
+  Deploy_container_and_Container_Security_Scan_and_ZAP_Scan:
     runs-on: ubuntu-latest
-    name: Deploy container and scan with ZAP
+    name: Deploy_container_and_Container_Security_Scan_and_ZAP_Scan
     permissions: write-all
     steps:
       - uses: actions/checkout@v3
       - name: run docker container
         run: |
-          docker build -t vulnerable-app -f ./Dockerfile .
-          docker run -d -p 8001:8001 vulnerable-app
+          docker build -t vulnerable-app:${{ github.sha }} -f ./Dockerfile .
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'vulnerable-app:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+      - name: Run Docker Container
+        run: |
+          docker run -d -p 8001:8001 vulnerable-app:${{ github.sha }}
           sleep 12
       - run: curl -I http://localhost:8001 || exit 1
       - name: ZAP Scan

@@ -81,27 +81,18 @@ jobs:
           name: reports
           path: reports
 
-  Build_app:
+
+  # Deploy container
+  Deploy_container:
     runs-on: ubuntu-latest
-    name: Build App
+    name: Deploy container
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18.19.0'
-      - name: install bower
-        run: npm install -g bower
-      - run: bower install --allow-root
-      - name: install dependencies
-        run: npm install
-      - name: Build
-        run: npm start
-      - name: Archive production artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build
+      - name: run docker container
+        run: |
+          docker build -t vulnerable-app .
+          docker run -p 8001:8001 vulnerable-app
+          sleep 10
+      - run: curl -I http://localhost:8001 || exit 1
 
   # ZAP Scan
   zap_scan:

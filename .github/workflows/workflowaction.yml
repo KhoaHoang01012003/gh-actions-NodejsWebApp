@@ -50,10 +50,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.19.0'
       - name: install bower
         run: npm install -g bower
       - name: install dependencies
-        run: npm ci
+        run: npm install
       - uses: oke-py/npm-audit-action@v2
         with:
           audit_level: moderate
@@ -86,11 +90,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '18.19.0'
       - name: install bower
         run: npm install -g bower
       - name: install dependencies
-        run: npm ci
+        run: npm install
       - name: Build
         run: npm start
       - name: Archive production artifacts

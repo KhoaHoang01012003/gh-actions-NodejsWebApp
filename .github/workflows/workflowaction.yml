@@ -144,6 +144,7 @@ jobs:
             registry-password: ${{ secrets.REGISTRY_PASSWORD }}
             name: aci-vulnerable-app
             location: 'southeastasia'
+            ports: 8001
             environment-variables: PORT=8001 ports=8001 port=8001
 
 

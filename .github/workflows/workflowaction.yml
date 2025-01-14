@@ -54,29 +54,8 @@ jobs:
           issue_labels: vulnerability,test
           dedupe_issues: true
   
-  # SAST Scan
-  sast_scan:
-    permissions: write-all
-    name: SAST Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: SAST Scan
-        uses: AppThreat/sast-scan-action@master
-        with:
-          type: "python"
-      - name: Upload SAST reports
-        uses: actions/upload-artifact@v3
-        with:
-          name: reports
-          path: reports
-          format: sarif
-          output: sast-results.sarif
-      - name: Upload SAST results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-              sarif_file: sast-results.sarif
 
-  # Deploy container, Container Security
+  # Deploy container, Container Security, ZAP Scan
   Build_container_and_Container_Security_Scan:
     runs-on: ubuntu-latest
     name: Deploy_container_and_Container_Security_Scan
@@ -102,7 +81,7 @@ jobs:
        # checkout the repo
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3
-       
+       # Login to Azure
       - name: 'Login via Azure CLI'
         uses: azure/login@v1
         with:
@@ -136,7 +115,7 @@ jobs:
         with:
             token: ${{ secrets.GITHUB_TOKEN }}
             docker_name: 'ghcr.io/zaproxy/zaproxy:stable'
-            target: 'http://vulnerable-app-resource-group.southeastasia.azurecontainer.io:8001/'
+            target: 'http://${{ secrets.RESOURCE_GROUP }}.southeastasia.azurecontainer.io:8001/'
             cmd_options: '-a'
             issue_title: 'ZAP Scan Report'
 

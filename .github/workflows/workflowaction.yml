@@ -65,7 +65,16 @@ jobs:
       - name: run docker container
         run: |
           docker build -t vulnerable-app:latest -f ./Dockerfile .
-      - name: Run Trivy vulnerability scanner
+      - name: Run Anchore scan
+        id: scan
+        uses: anchore/scan-action@v6
+        with:
+          image: "vulnerable-app:latest"
+      - name: upload Anchore scan SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
+      - name: Run Trivy IaC vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'vulnerable-app:latest'

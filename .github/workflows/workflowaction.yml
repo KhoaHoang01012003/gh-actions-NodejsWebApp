@@ -99,6 +99,11 @@ jobs:
         with:
             mode: live
             verbose: true
+      - name: Upload Falco capture
+        uses: actions/upload-artifact@v3
+        with:
+            name: capture         
+            path: /tmp/falco.pcap
       - name: Analyze Falco logs
         uses: falcosecurity/falco-actions/analyze@main
         with:

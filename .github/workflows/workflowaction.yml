@@ -54,19 +54,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           issue_labels: vulnerability,test
           dedupe_issues: true
-  # Start Falco
-  Falco:
-    runs-on: ubuntu-latest
-    name: Falco
-    steps:
-      - name: Checkout the code
-        uses: actions/checkout@v4
-      - name: Start Falco
-        uses: falcosecurity/falco-actions/start@main
-        with:
-          mode: live
-          falco-version: '0.39.0'
-          verbose: true
+
   # Deploy container, Container Security Scan
   Build_container_and_Container_Security_Scan:
     runs-on: ubuntu-latest
@@ -74,6 +62,12 @@ jobs:
     permissions: write-all
     steps:
       - uses: actions/checkout@v3
+      - name: Start Falco
+        uses: falcosecurity/falco-actions/start@main
+        with:
+            mode: live
+            falco-version: '0.39.0'
+            verbose: true
       - name: run docker container
         run: |
           docker build -t vulnerable-app:latest -f ./Dockerfile .

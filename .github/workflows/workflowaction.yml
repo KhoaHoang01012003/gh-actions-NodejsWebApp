@@ -100,7 +100,7 @@ jobs:
             mode: live
             verbose: true
       - name: Upload Falco capture
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
             name: capture         
             path: /tmp/falco.pcap

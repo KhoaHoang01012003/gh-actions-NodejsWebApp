@@ -12,9 +12,10 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  security-events: write
 
 jobs:
-
   # njsscan
   njsscan:
     permissions:
@@ -53,9 +54,20 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           issue_labels: vulnerability,test
           dedupe_issues: true
-  
-
-  # Deploy container, Container Security, ZAP Scan
+  # Start Falco
+  Falco:
+    runs-on: ubuntu-latest
+    name: Falco
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+      - name: Start Falco
+        uses: falcosecurity/falco-actions/start@main
+        with:
+          mode: live
+          falco-version: '0.39.0'
+          verbose: true
+  # Deploy container, Container Security Scan
   Build_container_and_Container_Security_Scan:
     runs-on: ubuntu-latest
     name: Deploy_container_and_Container_Security_Scan
@@ -65,16 +77,7 @@ jobs:
       - name: run docker container
         run: |
           docker build -t vulnerable-app:latest -f ./Dockerfile .
-      - name: Run Anchore scan
-        id: scan
-        uses: anchore/scan-action@v6
-        with:
-          image: "vulnerable-app:latest"
-      - name: upload Anchore scan SARIF report
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: ${{ steps.scan.outputs.sarif }}
-      - name: Run Trivy IaC vulnerability scanner
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'vulnerable-app:latest'
@@ -90,6 +93,23 @@ jobs:
        # checkout the repo
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v3
+       # Stop Falco
+      - name: Stop Falco
+        uses: falcosecurity/falco-actions/stop@main
+        with:
+            mode: live
+            verbose: true
+      - name: Analyze Falco logs
+        uses: falcosecurity/falco-actions/analyze@main
+        with:
+            falco-version: '0.39.0'
+            openai-user-prompt: "Pls add remediation steps"
+            openai-model: "gpt-3.5-turbo"
+            output: "falco-results.json"
+            output-format: "json"
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
        # Login to Azure
       - name: 'Login via Azure CLI'
         uses: azure/login@v1
@@ -105,7 +125,7 @@ jobs:
       - run: |
             docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/vulnerable-app:${{ github.sha }}
             docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/vulnerable-app:${{ github.sha }}
-        # Deploy to Azure Container Instances
+        # Deploy to Azure Container Instances 1
       - name: 'Deploy to Azure Container Instances'
         uses: 'azure/aci-deploy@v1'
         with:

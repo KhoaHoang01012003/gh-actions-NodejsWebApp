@@ -16,7 +16,7 @@ permissions:
   security-events: write
 
 jobs:
-  # sonarqube
+  # sonarqube #
   sonarQubeTrigger:
     runs-on: ubuntu-latest
     name: SonarQube Trigger

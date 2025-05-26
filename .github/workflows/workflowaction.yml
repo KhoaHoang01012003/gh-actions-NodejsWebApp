@@ -21,18 +21,30 @@ jobs:
     runs-on: self-hosted
     name: SonarQube Trigger
     steps:
-    - name: Checkout the code
-      uses: actions/checkout@v4
-    - name: SonarQube Scan
-      uses: achilleslinux/sonarqube-actions@master
-      with:
-        host: ${{ secrets.SONARQUBE_HOST }}
-        login: ${{ secrets.SONARQUBE_TOKEN }}
-        projectKey: test-cloud
-    - name: Upload sonarqube report
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: results.sarif
+      # 1. Bước bắt buộc - clone repo vào runner
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # 2. Bước mới - Copy local action đã preload
+      - name: Setup local actions from preload cache
+        run: |
+          mkdir -p .github/actions
+          cp -r "$RUNNER_WORKSPACE/_actions/achilleslinux/sonarqube-actions" .github/actions/sonarqube
+          mkdir -p .github/actions/codeql
+          cp -r "$RUNNER_WORKSPACE/_actions/github/codeql-action/upload-sarif" .github/actions/codeql/upload-sarif
+
+      # 3. Dùng local action thay vì tải từ GitHub
+      - name: Local SonarQube Scan
+        uses: ./.github/actions/sonarqube
+        with:
+          host: ${{ secrets.SONARQUBE_HOST }}
+          login: ${{ secrets.SONARQUBE_TOKEN }}
+          projectKey: test-cloud
+
+      - name: Local Upload SARIF to GitHub
+        uses: ./.github/actions/codeql/upload-sarif
+        with:
+          sarif_file: results.sarif
 
   # NPM Audit
   npmaudit:

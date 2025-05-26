@@ -18,7 +18,7 @@ permissions:
 jobs:
   # sonarqube #
   sonarQubeTrigger:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: SonarQube Trigger
     steps:
     - name: Checkout the code

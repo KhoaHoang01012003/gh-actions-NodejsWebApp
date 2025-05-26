@@ -22,15 +22,15 @@ jobs:
     name: SonarQube Trigger
     steps:
     - name: Checkout the code
-      uses: ./actions/checkout@v4
+      uses: actions/checkout@v4
     - name: SonarQube Scan
-      uses: ./achilleslinux/sonarqube-actions@master
+      uses: achilleslinux/sonarqube-actions@master
       with:
         host: ${{ secrets.SONARQUBE_HOST }}
         login: ${{ secrets.SONARQUBE_TOKEN }}
         projectKey: test-cloud
     - name: Upload sonarqube report
-      uses: ./github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: results.sarif
 

@@ -26,7 +26,7 @@ jobs:
     - name: SonarQube Scan
       uses: achilleslinux/sonarqube-actions@master
       with:
-        host: http://172.21.63.9:9000
+        host: http://172.21.48.1:9000
         login: ${{ secrets.SONARQUBE_TOKEN }}
         projectKey: test-cloud
     - name: Upload sonarqube report

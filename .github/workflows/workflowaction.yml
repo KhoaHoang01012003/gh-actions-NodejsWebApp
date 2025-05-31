@@ -88,18 +88,25 @@ jobs:
         with:
             mode: live
             verbose: true
+      # Save Falco logs to file (giúp FALCO_LOG_FILE có sẵn)
       - name: Save Falco logs to file
+        id: save-log
         run: |
-          echo "${{ steps.stop-falco.outputs.falco-logs }}" > falco.pcap
-
+          echo "${{ steps.stop-falco.outputs.falco-logs }}" > falco.log
+          ls -l falco.log 
       - name: Analyze Falco logs
         uses: falcosecurity/falco-actions/analyze@main
         with:
           falco-version: '0.39.0'
           openai-user-prompt: "Please summarize the alerts and suggest remediation."
           openai-model: "gpt-3.5-turbo"
+          extract-connections: true
+          extract-processes: true
+          extract-dns: true
+          extract-containers: true
+          filters-config: src/filters.config
         env:
-          FALCO_LOG_FILE: falco.pcap
+          FALCO_LOG_FILE: falco.log
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       #  # Login to Azure

@@ -49,6 +49,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           issue_labels: vulnerability,test
           dedupe_issues: true
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
       - name: Save audit summary
         run: |
           npm audit --json > audit.json

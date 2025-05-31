@@ -90,7 +90,7 @@ jobs:
             verbose: true
       - name: Save Falco logs to file
         run: |
-          echo "${{ steps.stop-falco.outputs.falco-logs }}" > falco.log
+          echo "${{ steps.stop-falco.outputs.falco-logs }}" > falco.pcap
 
       - name: Analyze Falco logs
         uses: falcosecurity/falco-actions/analyze@main
@@ -99,7 +99,7 @@ jobs:
           openai-user-prompt: "Please summarize the alerts and suggest remediation."
           openai-model: "gpt-3.5-turbo"
         env:
-          FALCO_LOG_FILE: falco.log
+          FALCO_LOG_FILE: falco.pcap
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       #  # Login to Azure

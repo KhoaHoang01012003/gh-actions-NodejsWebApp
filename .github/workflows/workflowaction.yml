@@ -24,7 +24,7 @@ jobs:
     - name: Checkout the code
       uses: actions/checkout@v4
     - name: SonarQube Scan
-      uses: achilleslinux/sonarqube-actions@master
+      uses: KhoaHoang01012003/sonarqube-actions@master
       with:
         host: http://host.docker.internal:9000
         login: ${{ secrets.SONARQUBE_TOKEN }}

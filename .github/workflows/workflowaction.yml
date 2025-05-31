@@ -49,6 +49,17 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           issue_labels: vulnerability,test
           dedupe_issues: true
+      - name: Save audit summary
+        run: |
+          npm audit --json > audit.json
+          jq '.metadata.vulnerabilities' audit.json > audit-summary.md
+          echo -e "## 🛡️ NPM Audit Summary\n" > audit-summary.md
+          jq -r '.metadata.vulnerabilities | to_entries[] | "* \(.key): \(.value)"' audit.json >> audit-summary.md
+      - name: Add formatted comment to vulnerability issue
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ steps.find_issue.outputs.issue_number }}
+          body-path: audit-summary.md
 
   # # Deploy container, Container Security Scan
   # Build_container_and_Container_Security_Scan:

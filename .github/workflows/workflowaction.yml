@@ -29,10 +29,7 @@ jobs:
         host: http://host.docker.internal:9000
         login: ${{ secrets.SONARQUBE_TOKEN }}
         projectKey: test-cloud
-    - name: Upload sonarqube report
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: results.sarif
+
 
   # NPM Audit
   npmaudit:

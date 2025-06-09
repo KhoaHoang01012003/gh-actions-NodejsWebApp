@@ -100,7 +100,7 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add falco.log
           git commit -m "Add Falco logs"
-          git push origin main  # Commit và push lên branch chính
+          git push origin master  # Commit và push lên branch chính
       - name: Analyze Falco logs
         uses: falcosecurity/falco-actions/analyze@main
         with:

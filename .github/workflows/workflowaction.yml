@@ -97,6 +97,7 @@ jobs:
       - name: Analyze Falco logs
         uses: falcosecurity/falco-actions/analyze@main
         with:
+          mode: live
           falco-version: '0.39.0'
           openai-user-prompt: "Please summarize the alerts and suggest remediation."
           openai-model: "gpt-3.5-turbo"

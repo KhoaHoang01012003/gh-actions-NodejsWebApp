@@ -93,7 +93,14 @@ jobs:
         id: save-log
         run: |
           echo "${{ steps.stop-falco.outputs.falco-logs }}" > falco.log
-          ls -l falco.log 
+          ls -l falco.log
+      - name: Commit and push Falco logs to repository
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add falco.log
+          git commit -m "Add Falco logs"
+          git push origin main  # Commit và push lên branch chính
       - name: Analyze Falco logs
         uses: falcosecurity/falco-actions/analyze@main
         with:

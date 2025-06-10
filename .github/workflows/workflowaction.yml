@@ -51,78 +51,42 @@ jobs:
   #         dedupe_issues: true
 
   # Deploy container, Container Security Scan
-  Build_container_and_Container_Security_Scan:
-    runs-on: ubuntu-latest
-    name: Deploy_container_and_Container_Security_Scan
-    permissions: write-all
-    steps:
-      - uses: actions/checkout@v3
-      - name: Start Falco
-        uses: falcosecurity/falco-actions/start@main
-        with:
-            mode: live
-            falco-version: '0.39.0'
-            verbose: true
-      - name: run docker container
-        run: |
-          docker build -t vulnerable-app:latest -f ./Dockerfile .
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'vulnerable-app:latest'
-          exit-code: '0'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
-        with:
+    Deploy_container_and_Container_Security_Scan:
+      runs-on: ubuntu-latest
+      permissions: write-all
+      steps:
+        - uses: actions/checkout@v3
+        - name: Start Falco sidecar # BƯỚC 1: CÀI ĐẶT VÀ KHỞI ĐỘNG FALCO
+          run: |
+            docker run -d --name falco --privileged -v /var/run/docker.sock:/host/var/run/docker.sock -v $(pwd)/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml falcosecurity/falco:latest
+        - name: Run Docker container with Falco monitoring # BƯỚC 2: FALCO GIÁM SÁT CONTAINER ỨNG DỤNG
+          run: |
+            docker build -t vulnerable-app:latest -f ./Dockerfile .
+            docker run --rm --name app-container -v $(pwd):/app vulnerable-app:latest &
+            sleep 10 # Allow container to run briefly for testing; adjust based on your app
+            docker stop app-container || true
+        - name: Check Falco logs for alerts # BƯỚC 3: KIỂM TRA CẢNH BÁO FALCO
+          run: |
+            docker logs falco | grep -i "WARNING" || true
+            if [ $? -eq 0 ]; then
+              echo "Security alerts detected by Falco!"
+              exit 1
+            fi
+        - name: Stop Falco # BƯỚC 4: DỪNG FALCO
+          run: docker stop falco || true
+        - name: Run Trivy vulnerability scanner
+          uses: aquasecurity/trivy-action@master
+          with:
+            image-ref: 'vulnerable-app:latest'
+            exit-code: '0'
+            ignore-unfixed: true
+            severity: 'CRITICAL,HIGH'
+            format: 'sarif'
+            output: 'trivy-results.sarif'
+        - name: Upload Trivy results
+          uses: github/codeql-action/upload-sarif@v3
+          with:
             sarif_file: trivy-results.sarif
-       # checkout the repo
-      - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v3
-       # Stop Falco
-      - name: Stop Falco
-        uses: falcosecurity/falco-actions/stop@main
-        with:
-            mode: live
-            verbose: true
-            run: |
-              ls -l /tmp
-              echo "Falco logs:"
-              cat /tmp/falco_events.json
-              echo "done!!!!!"
-      # Save Falco logs to file (giúp FALCO_LOG_FILE có sẵn)
-      - name: Save Falco logs to file
-        id: save-log
-        run: |
-          echo "${{ steps.stop-falco.outputs.falco-logs }}" > falco.log
-          ls -l falco.log
-          cat /tmp/falco_events.json
-      - name: Commit and push Falco logs to repository
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add falco.log
-          git commit -m "Add Falco logs"
-          git push origin master  # Commit và push lên branch chính
-      - name: Analyze Falco logs
-        uses: falcosecurity/falco-actions/analyze@main
-        with:
-          mode: live
-          falco-version: '0.39.0'
-          openai-user-prompt: "Please summarize the alerts and suggest remediation."
-          openai-model: "gpt-3.5-turbo"
-          extract-connections: true
-          extract-processes: true
-          extract-dns: true
-          extract-containers: true
-          filters-config: src/filters.config
-        env:
-          FALCO_LOG_FILE: falco.log
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       #  # Login to Azure
       # - name: 'Login via Azure CLI'
       #   uses: azure/login@v1

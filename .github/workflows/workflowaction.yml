@@ -94,6 +94,7 @@ jobs:
         run: |
           echo "${{ steps.stop-falco.outputs.falco-logs }}" > falco.log
           ls -l falco.log
+          cat /tmp/falco_events.json
       - name: Commit and push Falco logs to repository
         run: |
           git config --global user.name "github-actions"

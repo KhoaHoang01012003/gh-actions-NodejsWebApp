@@ -89,8 +89,10 @@ jobs:
             mode: live
             verbose: true
             run: |
-              ls -l /tmp/falco_events.json
+              ls -l /tmp
+              echo "Falco logs:"
               cat /tmp/falco_events.json
+              echo "done!!!!!"
       # Save Falco logs to file (giúp FALCO_LOG_FILE có sẵn)
       - name: Save Falco logs to file
         id: save-log

@@ -1,5 +1,5 @@
 - rule: Unexpected outbound connection from CI container
   desc: Detects unexpected outbound network connections from a GitHub Actions container
   condition: evt.type = connect and evt.dir = > and container.name = app-container and not fd.sname in (github.com, api.github.com, registry.npmjs.org, bower.io)
-  output: Unexpected outbound connection (source=%proc.name destination=%fd.sname container=%container.name)
+  output: Unexpected outbound connection detected (proc.name=%proc.name, destination=%fd.sname, container=%container.name)
   priority: WARNING

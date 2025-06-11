@@ -5,7 +5,7 @@ FROM node:18.19.0
 WORKDIR /app
 
 RUN npm install -g bower
-COPY package*.json ./
+COPY package*.json bower.json ./
 RUN npm install
 RUN npm install express --save
 COPY . .

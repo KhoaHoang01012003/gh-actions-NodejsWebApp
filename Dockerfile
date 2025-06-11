@@ -4,16 +4,14 @@ FROM node:18.19.0
 # Thiết lập thư mục làm việc trong container
 WORKDIR /app
 
+RUN npm install -g bower
 COPY package*.json ./
 RUN npm install
 RUN npm install express --save
-# Sao chép file package.json và package-lock.json vào container
 COPY . .
-
-# Cài đặt dependencies
-RUN npm install -g bower
 RUN bower install --allow-root
-RUN npm install
+
+
 
 
 # Expose port để container có thể giao tiếp

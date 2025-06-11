@@ -4,6 +4,9 @@ FROM node:18.19.0
 # Thiết lập thư mục làm việc trong container
 WORKDIR /app
 
+COPY package*.json ./
+RUN npm install
+RUN npm install express --save
 # Sao chép file package.json và package-lock.json vào container
 COPY . .
 

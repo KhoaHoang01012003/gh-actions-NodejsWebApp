@@ -62,8 +62,11 @@ jobs:
         - name: Run Docker container with Falco monitoring # BƯỚC 2: FALCO GIÁM SÁT CONTAINER ỨNG DỤNG
           run: |
             docker build -t vulnerable-app:latest -f ./Dockerfile .
-            docker run --rm --name app-container -v $(pwd):/app vulnerable-app:latest &
-            sleep 10 # Allow container to run briefly for testing; adjust based on your app
+            docker run -d --name app-container -v $(pwd):/app vulnerable-app:latest node src/server/app.js || {
+            echo "Failed to run container. Check logs for details."
+            exit 1
+            }
+            sleep 15
             docker stop app-container || true
         - name: Check Falco logs for alerts # BƯỚC 3: KIỂM TRA CẢNH BÁO FALCO
           run: |

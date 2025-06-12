@@ -84,14 +84,19 @@ jobs:
           run: |
             echo "Collecting Falco logs..."
             docker logs falco > falco_logs.txt 2>&1
-            echo "Full Falco logs:"
-            cat falco_logs.txt
-            echo "Checking for warnings in Falco logs..."
-            if grep -i "WARNING" falco_logs.txt; then
-              echo "Cảnh báo bảo mật được phát hiện bởi Falco! Log đã lưu trong falco_logs.txt"
-              exit 1
+            if [ -s falco_logs.txt ]; then
+              echo "Full Falco logs:"
+              cat falco_logs.txt
+              echo "Checking for warnings or errors in Falco logs..."
+              if grep -i "WARNING\|ERROR" falco_logs.txt; then
+                echo "Cảnh báo hoặc lỗi được phát hiện bởi Falco! Log đã lưu trong falco_logs.txt"
+                exit 1
+              else
+                echo "No warnings or errors found in Falco logs"
+              fi
             else
-              echo "No warnings found in Falco logs"
+              echo "Error: falco_logs.txt is empty"
+              exit 1
             fi
         - name: Upload Falco logs as artifact
           if: always()
@@ -101,21 +106,8 @@ jobs:
             path: falco_logs.txt        
         - name: Stop Falco # BƯỚC 4: DỪNG FALCO
           run: docker stop falco || true
-        - name: Run Trivy vulnerability scanner
-          uses: aquasecurity/trivy-action@master
-          with:
-            image-ref: 'vulnerable-app:latest'
-            exit-code: '0'
-            ignore-unfixed: true
-            severity: 'CRITICAL,HIGH'
-            format: 'sarif'
-            output: 'trivy-results.sarif'
-        - name: Upload Trivy results
-          uses: github/codeql-action/upload-sarif@v3
-          with:
-            sarif_file: trivy-results.sarif
         - name: Create GitHub Issue for Falco warnings
-          if: failure()
+          if: always()
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           run: |
@@ -151,6 +143,19 @@ jobs:
             else
               echo "falco_logs.txt is empty, skipping GitHub Issue creation"
             fi
+        - name: Run Trivy vulnerability scanner
+          uses: aquasecurity/trivy-action@master
+          with:
+            image-ref: 'vulnerable-app:latest'
+            exit-code: '0'
+            ignore-unfixed: true
+            severity: 'CRITICAL,HIGH'
+            format: 'sarif'
+            output: 'trivy-results.sarif'
+        - name: Upload Trivy results
+          uses: github/codeql-action/upload-sarif@v3
+          with:
+            sarif_file: trivy-results.sarif
       #  # Login to Azure
       # - name: 'Login via Azure CLI'
       #   uses: azure/login@v1

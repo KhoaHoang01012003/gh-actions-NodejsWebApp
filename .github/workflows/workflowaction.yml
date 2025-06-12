@@ -78,7 +78,7 @@ jobs:
             echo "Failed to run container. Check logs for details."
             exit 1
             }
-            sleep 
+            sleep 30
             docker stop app-container || true
         - name: Check Falco logs for alerts # BƯỚC 3: KIỂM TRA CẢNH BÁO FALCO
           run: |

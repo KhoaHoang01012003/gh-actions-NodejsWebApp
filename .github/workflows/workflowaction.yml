@@ -80,13 +80,23 @@ jobs:
             }
             sleep 30
             docker stop app-container || true
-        - name: Check Falco logs for alerts # BƯỚC 3: KIỂM TRA CẢNH BÁO FALCO
+        - name: Check Falco logs for alerts
           run: |
-            docker logs falco | grep -i "WARNING" || true
-            if [ $? -eq 0 ]; then
-              echo "Security alerts detected by Falco!"
+            echo "Full Falco logs:" > falco_logs.txt
+            docker logs falco >> falco_logs.txt
+            echo "Warnings in Falco logs:"
+            grep -i "WARNING" falco_logs.txt || echo "No warnings found"
+            if grep -i "WARNING" falco_logs.txt; then
+              echo "Cảnh báo bảo mật được phát hiện bởi Falco! Xem chi tiết trong falco_logs.txt"
+              cat falco_logs.txt
               exit 1
             fi
+        - name: Upload Falco logs as artifact
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: falco-logs
+            path: falco_logs.txt        
         - name: Stop Falco # BƯỚC 4: DỪNG FALCO
           run: docker stop falco || true
         - name: Run Trivy vulnerability scanner

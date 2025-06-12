@@ -82,6 +82,11 @@ jobs:
               exit 1
             }
             sleep 60
+            echo "Collecting app container logs..."
+            docker logs app-container > app-container_logs.txt 2>&1 || echo "Failed to collect app container logs"
+            echo "App container logs:"
+            cat app-container_logs.txt || echo "Failed to display app-container logs"
+            docker exec app-container curl http://example.com || echo "Failed to example.com failed"
             docker ps -a
         - name: Check Falco logs for alerts
           run: |

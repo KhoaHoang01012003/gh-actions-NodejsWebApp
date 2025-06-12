@@ -3,6 +3,8 @@
 
 var express = require('express');
 var app = express();
+const http = require('http');
+http.get('http://example.com', (res) => console.log('Connected to example.com'));
 // app.disable('x-powered-by');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');

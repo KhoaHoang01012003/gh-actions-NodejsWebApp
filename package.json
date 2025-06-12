@@ -3,8 +3,8 @@
   "description": "vulnerable-app Project Generated from HotTowel Angular",
   "version": "0.0.0",
   "scripts": {
-    "init": "npm install -g bower",
-    "install": "bower install --allow-root",
+    "init": "npm install -g bower --silent",
+    "install": "bower install --allow-root --silent",
     "start": "node src/server/app.js",
     "test": "gulp test"
   },

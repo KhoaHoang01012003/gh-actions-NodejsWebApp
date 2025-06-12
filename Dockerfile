@@ -4,12 +4,12 @@ FROM node:18.19.0
 # Thiết lập thư mục làm việc trong container
 WORKDIR /app
 
-RUN npm install -g bower
+RUN npm install -g bower --silent
 COPY package*.json bower.json ./
-RUN npm install
-RUN npm install express --save
+RUN npm install --silent
+RUN npm install express --save --silent
 COPY . .
-RUN bower install --allow-root
+RUN bower install --allow-root --silent
 
 
 

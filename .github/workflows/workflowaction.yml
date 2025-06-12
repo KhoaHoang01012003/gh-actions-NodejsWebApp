@@ -115,38 +115,27 @@ jobs:
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           run: |
-            if [ -s falco_logs.txt ]; then
-              WARNINGS=$(grep -i "WARNING" falco_logs.txt || echo "No warnings found")
-              FULL_LOGS=$(cat falco_logs.txt | sed 's/"/\\"/g' | tr '\n' '\r')
-              ISSUE_BODY=$(cat << 'EOF'
-              **Falco Security Alerts Detected**
-      
-              The following warnings were detected in the Falco logs during the CI run:
-      
-              \`\`\`
-              $WARNINGS
-              \`\`\`
-      
-              **Full Falco Logs**:
-              \`\`\`
-              $FULL_LOGS
-              \`\`\`
-      
-              **Repository**: ${{ github.repository }}
-              **Run ID**: ${{ github.run_id }}
-              **Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      
-              Please investigate the unexpected outbound connections and update the Falco rules or application as needed.
-              EOF
-              )
+            if [ -s falco_logs.txt ] || [ -s app_container_logs.txt ]; then
+              WARNINGS=$(grep -i "WARNING\|ERROR" falco_logs.txt || echo "No warnings or errors found in Falco logs")
+              FULL_FALCO_LOGS=$(cat falco_logs.txt | sed 's/"/\\"/g' | tr '\n' ' ' || echo "Falco logs unavailable")
+              APP_LOGS=$(cat app_container_logs.txt | sed 's/"/\\"/g' | tr '\n' ' ' || echo "App container logs unavailable")
+              ISSUE_BODY="**Falco and Container Logs from CI Run**\n\n"
+              ISSUE_BODY+="The following warnings or errors were detected in the Falco logs (if any):\n\n"
+              ISSUE_BODY+="\`\`\`\n$WARNINGS\n\`\`\`\n\n"
+              ISSUE_BODY+="**Full Falco Logs**:\n\`\`\`\n$FULL_FALCO_LOGS\n\`\`\`\n\n"
+              ISSUE_BODY+="**App Container Logs**:\n\`\`\`\n$APP_LOGS\n\`\`\`\n\n"
+              ISSUE_BODY+="**Repository**: ${{ github.repository }}\n"
+              ISSUE_BODY+="**Run ID**: ${{ github.run_id }}\n"
+              ISSUE_BODY+="**Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n"
+              ISSUE_BODY+="Please review the logs and update the application or Falco rules as needed."
               curl -X POST \
-                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                 -H "Accept: application/vnd.github.v3+json" \
                 https://api.github.com/repos/${{ github.repository }}/issues \
-                -d "{\"title\":\"Falco Security Alerts Detected in CI Run ${{ github.run_id }}\",\"body\":\"$ISSUE_BODY\"}"
+                -d "{\"title\":\"Falco and Container Logs for CI Run ${{ github.run_id }}\",\"body\":\"$ISSUE_BODY\"}"
             else
-              echo "falco_logs.txt is empty, skipping GitHub Issue creation"
-            fi
+              echo "No logs available, skipping GitHub Issue creation"
+            fi        
         - name: Run Trivy vulnerability scanner
           uses: aquasecurity/trivy-action@master
           with:

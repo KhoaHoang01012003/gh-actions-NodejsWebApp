@@ -120,7 +120,6 @@ jobs:
         - name: Stop Falco # BƯỚC 4: DỪNG FALCO
           run: docker stop falco || true
         - name: Create GitHub issue if warnings or failures occur
-          if: steps.check-falco-logs.outputs.contains_warnings == 'true' || steps.run-container.outcome == 'failure'
           run: |
             if [ -f falco_logs.txt ] || [ -s app-container_logs.txt ]; then
               WARNINGS=$(grep -i "WARNING\|ERROR\|CRITICAL" falco_logs.txt || echo "No warnings or errors found in Falco logs")

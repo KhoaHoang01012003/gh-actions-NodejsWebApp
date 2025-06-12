@@ -70,7 +70,8 @@ jobs:
                   -v /proc:/host/proc:ro \
                   -e HOST_ROOT=/host \
                   falcosecurity/falco:latest
-              }        
+              }
+                    
         - name: Run Docker container with Falco monitoring # BƯỚC 2: FALCO GIÁM SÁT CONTAINER ỨNG DỤNG
           run: |
             docker build -t vulnerable-app:latest -f ./Dockerfile .
@@ -78,8 +79,9 @@ jobs:
             echo "Failed to run container. Check logs for details."
             exit 1
             }
-            sleep 30
+            sleep 60
             docker stop app-container || true
+            docker ps -a
         - name: Check Falco logs for alerts
           run: |
             echo "Collecting Falco logs..."
@@ -98,6 +100,7 @@ jobs:
               echo "Error: falco_logs.txt is empty"
               exit 1
             fi
+            docker ps -a
         - name: Upload Falco logs as artifact
           if: always()
           uses: actions/upload-artifact@v4

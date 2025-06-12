@@ -58,7 +58,18 @@ jobs:
         - uses: actions/checkout@v3
         - name: Start Falco sidecar # BƯỚC 1: CÀI ĐẶT VÀ KHỞI ĐỘNG FALCO
           run: |
-            docker run -d --name falco --privileged -v /var/run/docker.sock:/host/var/run/docker.sock -v $(pwd)/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml falcosecurity/falco:latest
+            docker run -d --name falco --privileged \
+            -v /var/run/docker.sock:/host/var/run/docker.sock \
+            -v /proc:/host/proc:ro \
+            -v $(pwd)/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml \
+            -e HOST_ROOT=/host \
+            falcosecurity/falco:latest || {
+              echo "Failed to start Falco with custom rules. Using default rules..."
+              docker run -d --name falco --privileged \
+                -v /var/run/docker.sock:/host/var/run/docker.sock \
+                -v /proc:/host/proc:ro \
+                -e HOST_ROOT=/host \
+                falcosecurity/falco:latest
         - name: Run Docker container with Falco monitoring # BƯỚC 2: FALCO GIÁM SÁT CONTAINER ỨNG DỤNG
           run: |
             docker build -t vulnerable-app:latest -f ./Dockerfile .

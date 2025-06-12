@@ -92,20 +92,24 @@ jobs:
           run: |
             echo "Collecting Falco logs..."
             docker logs falco > falco_logs.txt 2>&1
-            if [ -s falco_logs.txt ]; then
+            if [ -f falco_logs.txt ]; then
               echo "Full Falco logs:"
               cat falco_logs.txt
               echo "Checking for warnings or errors in Falco logs..."
-              if grep -i "WARNING\|ERROR" falco_logs.txt; then
-                echo "Cảnh báo hoặc lỗi được phát hiện bởi Falco! Log đã lưu trong falco_logs.txt"
-                exit 1
+              if grep -q -i "WARNING\|ERROR\|CRITICAL" falco_logs.txt; then
+                echo "Warnings or errors found in Falco logs, will be recorded for issue creation"
+                echo "contains_warnings=true" >> $GITHUB_OUTPUT
               else
                 echo "No warnings or errors found in Falco logs"
+                echo "contains_warnings=false" >> $GITHUB_OUTPUT
               fi
             else
-              echo "Error: falco_logs.txt is empty"
+              echo "Error: falco_logs.txt is empty or not found"
+              echo "contains_warnings=true" >> $GITHUB_OUTPUT
               exit 1
             fi
+            # Always exit successfully to continue workflow
+            exit 0            
             docker ps -a
         - name: Upload Falco logs as artifact
           if: always()
@@ -115,15 +119,13 @@ jobs:
             path: falco_logs.txt        
         - name: Stop Falco # BƯỚC 4: DỪNG FALCO
           run: docker stop falco || true
-        - name: Create GitHub Issue for Falco warnings
-          if: always()
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        - name: Create GitHub issue if warnings or failures occur
+          if: steps.check-falco-logs.outputs.contains_warnings == 'true' || steps.run-container.outcome == 'failure'
           run: |
-            if [ -s falco_logs.txt ] || [ -s app_container_logs.txt ]; then
-              WARNINGS=$(grep -i "WARNING\|ERROR" falco_logs.txt || echo "No warnings or errors found in Falco logs")
+            if [ -f falco_logs.txt ] || [ -s app-container_logs.txt ]; then
+              WARNINGS=$(grep -i "WARNING\|ERROR\|CRITICAL" falco_logs.txt || echo "No warnings or errors found in Falco logs")
               FULL_FALCO_LOGS=$(cat falco_logs.txt | sed 's/"/\\"/g' | tr '\n' ' ' || echo "Falco logs unavailable")
-              APP_LOGS=$(cat app_container_logs.txt | sed 's/"/\\"/g' | tr '\n' ' ' || echo "App container logs unavailable")
+              APP_LOGS=$(cat app-container_logs.txt | sed 's/"/\\"/g' | tr '\n' ' ' || echo "App container logs unavailable")
               ISSUE_BODY="**Falco and Container Logs from CI Run**\n\n"
               ISSUE_BODY+="The following warnings or errors were detected in the Falco logs (if any):\n\n"
               ISSUE_BODY+="\`\`\`\n$WARNINGS\n\`\`\`\n\n"
@@ -140,7 +142,9 @@ jobs:
                 -d "{\"title\":\"Falco and Container Logs for CI Run ${{ github.run_id }}\",\"body\":\"$ISSUE_BODY\"}"
             else
               echo "No logs available, skipping GitHub Issue creation"
-            fi        
+            fi
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         - name: Run Trivy vulnerability scanner
           uses: aquasecurity/trivy-action@master
           with:

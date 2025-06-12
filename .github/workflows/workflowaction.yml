@@ -82,14 +82,16 @@ jobs:
             docker stop app-container || true
         - name: Check Falco logs for alerts
           run: |
-            echo "Full Falco logs:" > falco_logs.txt
-            docker logs falco >> falco_logs.txt
-            echo "Warnings in Falco logs:"
-            grep -i "WARNING" falco_logs.txt || echo "No warnings found"
+            echo "Collecting Falco logs..."
+            docker logs falco > falco_logs.txt 2>&1
+            echo "Full Falco logs:"
+            cat falco_logs.txt
+            echo "Checking for warnings in Falco logs..."
             if grep -i "WARNING" falco_logs.txt; then
-              echo "Cảnh báo bảo mật được phát hiện bởi Falco! Xem chi tiết trong falco_logs.txt"
-              cat falco_logs.txt
+              echo "Cảnh báo bảo mật được phát hiện bởi Falco! Log đã lưu trong falco_logs.txt"
               exit 1
+            else
+              echo "No warnings found in Falco logs"
             fi
         - name: Upload Falco logs as artifact
           if: always()
@@ -112,6 +114,43 @@ jobs:
           uses: github/codeql-action/upload-sarif@v3
           with:
             sarif_file: trivy-results.sarif
+        - name: Create GitHub Issue for Falco warnings
+          if: failure()
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            if [ -s falco_logs.txt ]; then
+              WARNINGS=$(grep -i "WARNING" falco_logs.txt || echo "No warnings found")
+              FULL_LOGS=$(cat falco_logs.txt | sed 's/"/\\"/g' | tr '\n' '\r')
+              ISSUE_BODY=$(cat << 'EOF'
+              **Falco Security Alerts Detected**
+      
+              The following warnings were detected in the Falco logs during the CI run:
+      
+              \`\`\`
+              $WARNINGS
+              \`\`\`
+      
+              **Full Falco Logs**:
+              \`\`\`
+              $FULL_LOGS
+              \`\`\`
+      
+              **Repository**: ${{ github.repository }}
+              **Run ID**: ${{ github.run_id }}
+              **Run URL**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      
+              Please investigate the unexpected outbound connections and update the Falco rules or application as needed.
+              EOF
+              )
+              curl -X POST \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github.v3+json" \
+                https://api.github.com/repos/${{ github.repository }}/issues \
+                -d "{\"title\":\"Falco Security Alerts Detected in CI Run ${{ github.run_id }}\",\"body\":\"$ISSUE_BODY\"}"
+            else
+              echo "falco_logs.txt is empty, skipping GitHub Issue creation"
+            fi
       #  # Login to Azure
       # - name: 'Login via Azure CLI'
       #   uses: azure/login@v1

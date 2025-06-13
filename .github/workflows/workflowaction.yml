@@ -16,42 +16,42 @@ permissions:
   security-events: write
 
 jobs:
-  # sonarqube 1
-  # sonarQubeTrigger:
-  #   runs-on: self-hosted
-  #   name: SonarQube Trigger
-  #   steps:
-  #   - name: Checkout the code
-  #     uses: actions/checkout@v4
-  #   - name: SonarQube Scan
-  #     uses: KhoaHoang01012003/sonarqube-actions@master
-  #     with:
-  #       host: http://host.docker.internal:9000
-  #       login: ${{ secrets.SONARQUBE_TOKEN }}
-  #       projectKey: test-cloud
+ # sonarqube 1
+  sonarQubeTrigger:
+    runs-on: self-hosted
+    name: SonarQube Trigger
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v4
+    - name: SonarQube Scan
+      uses: KhoaHoang01012003/sonarqube-actions@master
+      with:
+        host: http://host.docker.internal:9000
+        login: ${{ secrets.SONARQUBE_TOKEN }}
+        projectKey: test-cloud1
 
 
   # # NPM Audit
-  # npmaudit:
-  #   permissions: write-all
-  #   name: npm audit
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v3
-  #       with:
-  #         node-version: '18.19.0'
-  #     - uses: oke-py/npm-audit-action@v2
-  #       continue-on-error: true
-  #       with:
-  #         audit_level: moderate
-  #         github_token: ${{ secrets.GITHUB_TOKEN }}
-  #         issue_labels: vulnerability,test
-  #         dedupe_issues: true
+  npmaudit:
+    permissions: write-all
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.19.0'
+      - uses: oke-py/npm-audit-action@v2
+        continue-on-error: true
+        with:
+          audit_level: moderate
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_labels: vulnerability,test
+          dedupe_issues: true
 
   # Deploy container, Container Image Security Scan and Container Runtime Security Scan
-    Deploy_container_and_Container_Security_Scan:
+  Deploy_container_and_Container_Security_Scan:
       runs-on: ubuntu-latest
       permissions: write-all
       steps:

@@ -109,8 +109,9 @@ jobs:
               exit 1
             fi
             # Always exit successfully to continue workflow
-            exit 0            
             docker ps -a
+            exit 0            
+            
         - name: Upload Falco logs as artifact
           if: always()
           uses: actions/upload-artifact@v4

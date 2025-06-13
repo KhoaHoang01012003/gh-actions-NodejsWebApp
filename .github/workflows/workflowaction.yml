@@ -75,7 +75,7 @@ jobs:
         - name: Run Docker container with Falco monitoring # BƯỚC 2: FALCO GIÁM SÁT CONTAINER ỨNG DỤNG
           run: |
             docker build -t vulnerable-app:latest -f ./Dockerfile .
-            docker run -d --rm --name app-container vulnerable-app:latest npm start || {
+            docker run -d -p 8001:8001 --rm --name app-container vulnerable-app:latest npm start || {
               echo "Failed to start app-container, checking logs..."
               docker logs app-container > app_container_logs.txt 2>&1
               cat app_container_logs.txt

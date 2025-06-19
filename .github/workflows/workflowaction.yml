@@ -167,7 +167,7 @@ jobs:
           uses: aquasecurity/trivy-action@master
           with:
             image-ref: 'vulnerable-app:latest'
-            scanners: 'vuln, secret, misconfig, license'
+            scanners: 'vuln,secret,misconfig,license'
             exit-code: '0'
             ignore-unfixed: true
             severity: 'CRITICAL,HIGH'

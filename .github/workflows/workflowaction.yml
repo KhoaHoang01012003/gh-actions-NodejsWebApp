@@ -51,12 +51,12 @@ jobs:
           dedupe_issues: true
 
   # Deploy container, Container Image Security Scan and Container Runtime Security Scan
-  Deploy_container_and_Container_Security_Scan:
+  BuildContainerImage_RunAppOnRunnerLocal_ContainerRuntimeScanner_ContainerImageScanner_DAST:
       runs-on: ubuntu-latest
       permissions: write-all
       steps:
         - uses: actions/checkout@v3
-        - name: Start Falco sidecar # BƯỚC 1: CÀI ĐẶT VÀ KHỞI ĐỘNG FALCO
+        - name: Start Falco sidecar 
           run: |
             docker run -d --name falco --privileged \
               -v /var/run/docker.sock:/host/var/run/docker.sock \
@@ -72,7 +72,7 @@ jobs:
                   falcosecurity/falco:latest
               }
                     
-        - name: Run Docker container with Falco monitoring # BƯỚC 2: FALCO GIÁM SÁT CONTAINER ỨNG DỤNG
+        - name: Run Docker container with Falco monitoring 
           run: |
             docker build -t vulnerable-app:latest -f ./Dockerfile .
             docker run -d -p 8001:8001 --rm --name app-container vulnerable-app:latest npm start || {
@@ -86,7 +86,6 @@ jobs:
             docker logs app-container > app-container_logs.txt 2>&1 || echo "Failed to collect app container logs"
             echo "App container logs:"
             cat app-container_logs.txt || echo "Failed to display app-container logs"
-            docker exec app-container curl http://example.com || echo "Failed to example.com failed"
             docker ps -a
         - name: Check Falco logs for alerts
           run: |
@@ -111,15 +110,12 @@ jobs:
             # Always exit successfully to continue workflow
             docker ps -a
             exit 0            
-            
         - name: Upload Falco logs as artifact
           if: always()
           uses: actions/upload-artifact@v4
           with:
             name: falco-logs
-            path: falco_logs.txt        
-        - name: Stop Falco # BƯỚC 4: DỪNG FALCO
-          run: docker stop falco || true
+            path: falco_logs.txt     
         - name: Create GitHub issue if warnings or failures occur
           run: |
             if [ -f falco_logs.txt ]; then
@@ -162,7 +158,11 @@ jobs:
               echo "No Falco logs available, skipping GitHub Issue creation"
             fi          
           env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        - name: Stop Falco 
+          run: docker stop falco || true
+          
         - name: Run Trivy vulnerability scanner
           uses: aquasecurity/trivy-action@master
           with:

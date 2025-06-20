@@ -50,7 +50,6 @@ jobs:
           issue_labels: vulnerability,test
           dedupe_issues: true
 
-  # Deploy container, Container Image Security Scan and Container Runtime Security Scan
   Deploy_Stage:
       runs-on: ubuntu-latest
       permissions: write-all
@@ -197,4 +196,4 @@ jobs:
 
 
 
-      
+  

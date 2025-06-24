@@ -28,7 +28,7 @@ jobs:
       with:
         host: http://host.docker.internal:9000
         login: ${{ secrets.SONARQUBE_TOKEN }}
-        projectKey: test-cloud1
+        projectKey: test-cloud2
 
 
   # # NPM Audit

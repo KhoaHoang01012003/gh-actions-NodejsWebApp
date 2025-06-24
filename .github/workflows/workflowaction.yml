@@ -16,7 +16,7 @@ permissions:
   security-events: write
 
 jobs:
- # sonarqube 1
+ # sonarqube 
   sonarQubeTrigger:
     runs-on: self-hosted
     name: SonarQube Trigger

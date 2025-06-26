@@ -37,7 +37,7 @@ jobs:
     name: npm audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -55,7 +55,7 @@ jobs:
       runs-on: ubuntu-latest
       permissions: write-all
       steps:
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@v4
         - name: Start Falco sidecar 
           run: |
             docker run -d --name falco --privileged \
@@ -188,6 +188,22 @@ jobs:
               cmd_options: '-a'
               issue_title: 'ZAP Scan Report'
 
+        - name: Setup Node.js for Dashboard
+          uses: actions/setup-node@v4
+          with:
+            node-version: '18'
+        - name: Build Dashboard
+          run: |
+            cd dashboard
+            npm install
+            npm run build
+          env:
+            REACT_APP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        - name: Deploy Dashboard to GitHub Pages
+          uses: peaceiris/actions-gh-pages@v4
+          with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            publish_dir: ./dashboard/dist
     
 
 

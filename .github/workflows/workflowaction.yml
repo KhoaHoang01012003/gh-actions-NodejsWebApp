@@ -216,7 +216,7 @@ jobs:
               exit 1
             fi
             cat dashboard/vite.config.js
-            node -e "require('./dashboard/vite.config.js')" || {
+            node -e "import('./dashboard/vite.config.js').then(module => { if (!module.default) throw new Error('No default export'); }).catch(err => { console.error(err); process.exit(1); })" || {
               echo "Error: Invalid JavaScript in dashboard/vite.config.js"
               exit 1
             }
@@ -245,9 +245,7 @@ jobs:
           run: |
             echo "Checking deployed files in dashboard/dist..."
             ls -lR dashboard/dist
-            cat dashboard/dist/index.html || echo "dashboard/dist/index.html is empty or not found"
-        - name: Create GitHub Pages deployment issue
-          run: |    
+            cat dashboard/dist/index.html || echo "dashboard/dist/index.html is empty or not found" 
 
 
 

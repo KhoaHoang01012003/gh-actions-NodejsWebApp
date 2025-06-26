@@ -23,12 +23,15 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const GITHUB_TOKEN = process.env.REACT_APP_GITHUB_TOKEN;
+  const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
   const REPO = 'KhoaHoang01012003/gh-actions-NodejsWebApp';
 
   const fetchIssues = async () => {
     try {
       setLoading(true);
+      if (!GITHUB_TOKEN) {
+        throw new Error('GitHub token is missing or undefined');
+      }
       const response = await axios.get(`https://api.github.com/repos/${REPO}/issues`, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -37,7 +40,8 @@ const Dashboard = () => {
       });
       setIssues(response.data);
     } catch (err) {
-      setError('Failed to fetch issues: ' + err.message);
+      console.error('Fetch Issues Error:', err.response?.data || err.message);
+      setError(`Failed to fetch issues: ${err.response?.status} ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -46,6 +50,9 @@ const Dashboard = () => {
   const fetchTrivyAlerts = async () => {
     try {
       setLoading(true);
+      if (!GITHUB_TOKEN) {
+        throw new Error('GitHub token is missing or undefined');
+      }
       const response = await axios.get(`https://api.github.com/repos/${REPO}/code-scanning/alerts?tool_name=Trivy`, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -54,7 +61,8 @@ const Dashboard = () => {
       });
       setTrivyAlerts(response.data);
     } catch (err) {
-      setError('Failed to fetch Trivy alerts: ' + err.message);
+      console.error('Fetch Trivy Alerts Error:', err.response?.data || err.message);
+      setError(`Failed to fetch Trivy alerts: ${err.response?.status} ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -65,7 +73,7 @@ const Dashboard = () => {
       fetchIssues();
       fetchTrivyAlerts();
     } else {
-      setError('GitHub token is missing');
+      setError('GitHub token is missing, please configure VITE_GITHUB_TOKEN');
     }
   }, []);
 

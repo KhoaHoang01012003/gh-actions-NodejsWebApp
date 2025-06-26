@@ -240,7 +240,7 @@ jobs:
             ls -lR dist || echo "dist folder not created"
             cat dist/index.html || echo "dist/index.html is empty or not found"
           env:
-            REACT_APP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            REACT_APP_GITHUB_TOKEN: ${{ secrets.REACT_APP_GITHUB_TOKEN }}
         - name: Deploy Dashboard to GitHub Pages
           uses: peaceiris/actions-gh-pages@v4
           with:

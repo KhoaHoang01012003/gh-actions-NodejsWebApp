@@ -23,25 +23,16 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
-  const REPO = 'KhoaHoang01012003/gh-actions-NodejsWebApp';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002';
 
   const fetchIssues = async () => {
     try {
       setLoading(true);
-      if (!GITHUB_TOKEN) {
-        throw new Error('GitHub token is missing or undefined');
-      }
-      const response = await axios.get(`https://api.github.com/repos/${REPO}/issues`, {
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      });
+      const response = await axios.get(`${API_BASE_URL}/api/issues`);
       setIssues(response.data);
     } catch (err) {
       console.error('Fetch Issues Error:', err.response?.data || err.message);
-      setError(`Failed to fetch issues: ${err.response?.status} ${err.response?.data?.message || err.message}`);
+      setError(`Failed to fetch issues: ${err.response?.status} ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -50,31 +41,19 @@ const Dashboard = () => {
   const fetchTrivyAlerts = async () => {
     try {
       setLoading(true);
-      if (!GITHUB_TOKEN) {
-        throw new Error('GitHub token is missing or undefined');
-      }
-      const response = await axios.get(`https://api.github.com/repos/${REPO}/code-scanning/alerts?tool_name=Trivy`, {
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      });
+      const response = await axios.get(`${API_BASE_URL}/api/code-scanning/alerts`);
       setTrivyAlerts(response.data);
     } catch (err) {
       console.error('Fetch Trivy Alerts Error:', err.response?.data || err.message);
-      setError(`Failed to fetch Trivy alerts: ${err.response?.status} ${err.response?.data?.message || err.message}`);
+      setError(`Failed to fetch Trivy alerts: ${err.response?.status} ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (GITHUB_TOKEN) {
-      fetchIssues();
-      fetchTrivyAlerts();
-    } else {
-      setError('GitHub token is missing, please configure VITE_GITHUB_TOKEN');
-    }
+    fetchIssues();
+    fetchTrivyAlerts();
   }, []);
 
   // Process SCA data

@@ -196,11 +196,43 @@ jobs:
           uses: actions/setup-node@v4
           with:
             node-version: '18'
+            cache: 'npm'
+            cache-dependency-path: dashboard/package.json
+        - name: Validate Dashboard package.json and vite.config.js
+          run: |
+            echo "Validating dashboard/package.json..."
+            if [ ! -f dashboard/package.json ]; then
+              echo "Error: dashboard/package.json not found"
+              exit 1
+            fi
+            cat dashboard/package.json
+            jq . dashboard/package.json || {
+              echo "Error: Invalid JSON in dashboard/package.json"
+              exit 1
+            }
+            echo "Validating dashboard/vite.config.js..."
+            if [ ! -f dashboard/vite.config.js ]; then
+              echo "Error: dashboard/vite.config.js not found"
+              exit 1
+            fi
+            cat dashboard/vite.config.js
+            node -e "require('./dashboard/vite.config.js')" || {
+              echo "Error: Invalid JavaScript in dashboard/vite.config.js"
+              exit 1
+            }
+            echo "Validating dashboard/index.html..."
+            if [ ! -f dashboard/index.html ]; then
+              echo "Error: dashboard/index.html not found"
+              exit 1
+            fi
+            cat dashboard/index.html
         - name: Build Dashboard
           run: |
             cd dashboard
-            npm install
-            npm run build
+            npm install --verbose
+            npm run build --verbose
+            ls -lR dist || echo "dist folder not created"
+            cat dist/index.html || echo "dist/index.html is empty or not found"
           env:
             REACT_APP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         - name: Deploy Dashboard to GitHub Pages
@@ -208,7 +240,14 @@ jobs:
           with:
             github_token: ${{ secrets.GITHUB_TOKEN }}
             publish_dir: ./dashboard/dist
-    
+            force_orphan: true
+        - name: Debug GitHub Pages content
+          run: |
+            echo "Checking deployed files in dashboard/dist..."
+            ls -lR dashboard/dist
+            cat dashboard/dist/index.html || echo "dashboard/dist/index.html is empty or not found"
+        - name: Create GitHub Pages deployment issue
+          run: |    
 
 
 

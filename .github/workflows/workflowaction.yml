@@ -198,6 +198,12 @@ jobs:
             node-version: '18'
             cache: 'npm'
             cache-dependency-path: dashboard/package.json
+        - name: Install Dashboard dependencies
+          run: |
+            cd dashboard
+            npm install --verbose
+            ls -l node_modules/vite || echo "vite not installed"
+            ls -l node_modules/@vitejs/plugin-react || echo "@vitejs/plugin-react not installed"
         - name: Validate Dashboard package.json and vite.config.js
           run: |
             echo "Validating dashboard/package.json..."
@@ -216,20 +222,20 @@ jobs:
               exit 1
             fi
             cat dashboard/vite.config.js
-            node -e "import('./dashboard/vite.config.js').then(module => { if (!module.default) throw new Error('No default export'); }).catch(err => { console.error(err); process.exit(1); })" || {
+            cd dashboard
+            node -e "import('./vite.config.js').then(module => { if (!module.default) throw new Error('No default export'); }).catch(err => { console.error(err); process.exit(1); })" || {
               echo "Error: Invalid JavaScript in dashboard/vite.config.js"
               exit 1
             }
             echo "Validating dashboard/index.html..."
-            if [ ! -f dashboard/index.html ]; then
+            if [ ! -f index.html ]; then
               echo "Error: dashboard/index.html not found"
               exit 1
             fi
-            cat dashboard/index.html
+            cat index.html
         - name: Build Dashboard
           run: |
             cd dashboard
-            npm install --verbose
             npm run build --verbose
             ls -lR dist || echo "dist folder not created"
             cat dist/index.html || echo "dist/index.html is empty or not found"
@@ -245,7 +251,7 @@ jobs:
           run: |
             echo "Checking deployed files in dashboard/dist..."
             ls -lR dashboard/dist
-            cat dashboard/dist/index.html || echo "dashboard/dist/index.html is empty or not found" 
+            cat dashboard/dist/index.html || echo "dashboard/dist/index.html is empty or not found"
 
 
 

@@ -9,3 +9,4 @@ dashboard/dist/
 .tmp
 report/
 build/
+dashboard/src/App.jsx

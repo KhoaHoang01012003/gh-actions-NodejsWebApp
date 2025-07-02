@@ -87,7 +87,7 @@ const Dashboard = () => {
   const GITHUB_API_URL = 'https://api.github.com';
   const GITHUB_OWNER = 'KhoaHoang01012003';
   const GITHUB_REPO = 'gh-actions-NodejsWebApp';
-  const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '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';
+  const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 
   const fetchIssues = async () => {
     try {

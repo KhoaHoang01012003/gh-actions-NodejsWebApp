@@ -83,7 +83,7 @@ const Dashboard = () => {
   const [expandedReports, setExpandedReports] = useState({});
   const [expandedTrivyDetails, setExpandedTrivyDetails] = useState({});
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002';
+  const API_BASE_URL = 'https://api.github.com/KhoaHoang01012003/gh-actions-NodejsWebApp' || 'http://localhost:8002';
   const GITHUB_API_URL = 'https://api.github.com';
   const GITHUB_OWNER = 'KhoaHoang01012003';
   const GITHUB_REPO = 'gh-actions-NodejsWebApp';
@@ -92,7 +92,7 @@ const Dashboard = () => {
   const fetchIssues = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/issues`, {
+      const response = await axios.get(`${API_BASE_URL}/api/issuess`, {
         headers: { 'Accept': 'application/vnd.github+json' }
       });
       console.log('Fetched Issues:', response.data);

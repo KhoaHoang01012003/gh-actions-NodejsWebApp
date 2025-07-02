@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const REPO = 'KhoaHoang01012003/gh-actions-NodejsWebApp';
+const REPO = process.env.REPO;
 
 // Endpoint để lấy Issues
 app.get('/api/issues', async (req, res) => {
@@ -30,6 +30,28 @@ app.get('/api/issues', async (req, res) => {
     console.error('Error fetching issues:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
       error: `Failed to fetch issues: ${error.response?.status} ${error.response?.data?.message || error.message}`,
+    });
+  }
+});
+
+// Endpoint để lấy comments của một Issue
+app.get('/api/issues/:issueNumber/comments', async (req, res) => {
+  const { issueNumber } = req.params;
+  try {
+    if (!GITHUB_TOKEN) {
+      throw new Error('GITHUB_TOKEN is missing');
+    }
+    const response = await axios.get(`https://api.github.com/repos/${REPO}/issues/${issueNumber}/comments`, {
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error(`Error fetching comments for issue ${issueNumber}:`, error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: `Failed to fetch comments: ${error.response?.status} ${error.response?.data?.message || error.message}`,
     });
   }
 });

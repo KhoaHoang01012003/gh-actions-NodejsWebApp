@@ -16,243 +16,243 @@ permissions:
   security-events: write
 
 jobs:
-#  # sonarqube 
-#   sonarQubeTrigger:
-#     runs-on: self-hosted
-#     name: SonarQube Trigger
-#     steps:
-#     - name: Checkout the code
-#       uses: actions/checkout@v4
-#     - name: SonarQube Scan
-#       uses: KhoaHoang01012003/sonarqube-actions@master
-#       with:
-#         host: http://host.docker.internal:9000
-#         login: ${{ secrets.SONARQUBE_TOKEN }}
-#         projectKey: test-cloud2
+ # sonarqube 
+  sonarQubeTrigger:
+    runs-on: self-hosted
+    name: SonarQube Trigger
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v4
+    - name: SonarQube Scan
+      uses: KhoaHoang01012003/sonarqube-actions@master
+      with:
+        host: http://host.docker.internal:9000
+        login: ${{ secrets.SONARQUBE_TOKEN }}
+        projectKey: test-cloud2
 
 
-#   # # NPM Audit
-#   npmaudit:
-#     permissions: write-all
-#     name: npm audit
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v4
-#       - name: Set up Node.js
-#         uses: actions/setup-node@v3
-#         with:
-#           node-version: '18.19.0'
-#       - uses: oke-py/npm-audit-action@v2
-#         continue-on-error: true
-#         with:
-#           audit_level: moderate
-#           github_token: ${{ secrets.GITHUB_TOKEN }}
-#           issue_labels: vulnerability,test
-#           dedupe_issues: true
+  # # NPM Audit
+  npmaudit:
+    permissions: write-all
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.19.0'
+      - uses: oke-py/npm-audit-action@v2
+        continue-on-error: true
+        with:
+          audit_level: moderate
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_labels: vulnerability,test
+          dedupe_issues: true
 
   Deploy_Stage:
       runs-on: ubuntu-latest
       permissions: write-all
       steps:
         - uses: actions/checkout@v4
-        # - name: Start Falco sidecar 
-        #   run: |
-        #     docker run -d --name falco --privileged \
-        #       -v /var/run/docker.sock:/host/var/run/docker.sock \
-        #       -v /proc:/host/proc:ro \
-        #       -v $(pwd)/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml \
-        #       -e HOST_ROOT=/host \
-        #       falcosecurity/falco:latest || {
-        #         echo "Failed to start Falco with custom rules. Using default rules..."
-        #         docker run -d --name falco --privileged \
-        #           -v /var/run/docker.sock:/host/var/run/docker.sock \
-        #           -v /proc:/host/proc:ro \
-        #           -e HOST_ROOT=/host \
-        #           falcosecurity/falco:latest
-        #       }
+        - name: Start Falco sidecar 
+          run: |
+            docker run -d --name falco --privileged \
+              -v /var/run/docker.sock:/host/var/run/docker.sock \
+              -v /proc:/host/proc:ro \
+              -v $(pwd)/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml \
+              -e HOST_ROOT=/host \
+              falcosecurity/falco:latest || {
+                echo "Failed to start Falco with custom rules. Using default rules..."
+                docker run -d --name falco --privileged \
+                  -v /var/run/docker.sock:/host/var/run/docker.sock \
+                  -v /proc:/host/proc:ro \
+                  -e HOST_ROOT=/host \
+                  falcosecurity/falco:latest
+              }
                     
-        # - name: Build Docker image for vulnerable app 
-        #   run: |
-        #     docker build -t vulnerable-app:latest -f ./Dockerfile .
+        - name: Build Docker image for vulnerable app 
+          run: |
+            docker build -t vulnerable-app:latest -f ./Dockerfile .
 
-        # - name: Run Trivy vulnerability scanner
-        #   uses: aquasecurity/trivy-action@master
+        - name: Run Trivy vulnerability scanner
+          uses: aquasecurity/trivy-action@master
+          with:
+            image-ref: 'vulnerable-app:latest'
+            scanners: 
+            exit-code: '0'
+            ignore-unfixed: true
+            severity: 'CRITICAL,HIGH'
+            format: 'sarif'
+            output: 'trivy-results.sarif'
+        - name: Upload Trivy results
+          uses: github/codeql-action/upload-sarif@v3
+          with:
+            sarif_file: trivy-results.sarif
+
+        - name: Start application from Docker container
+          run: |
+            docker run -d -p 8001:8001 --rm --name app-container vulnerable-app:latest npm start || {
+              echo "Failed to start app-container, checking logs..."
+              docker logs app-container > app_container_logs.txt 2>&1
+              cat app_container_logs.txt
+              exit 1
+            }
+            sleep 60
+            echo "Collecting app container logs..."
+            docker logs app-container > app-container_logs.txt 2>&1 || echo "Failed to collect app container logs"
+            echo "App container logs:"
+            cat app-container_logs.txt || echo "Failed to display app-container logs"
+            docker ps -a
+
+          # ZAP Scan
+        - name: ZAP Scan
+          uses: zaproxy/action-full-scan@v0.12.0
+          with:
+              token: ${{ secrets.GITHUB_TOKEN }}
+              docker_name: 'ghcr.io/zaproxy/zaproxy:stable'
+              target: 'http://localhost:8001/'
+              cmd_options: '-a'
+              issue_title: 'ZAP Scan Report'
+
+        - name: Check Falco logs for alerts
+          run: |
+            echo "Collecting Falco logs..."
+            docker logs falco > falco_logs.txt 2>&1
+            if [ -f falco_logs.txt ]; then
+              echo "Full Falco logs:"
+              cat falco_logs.txt
+              echo "Checking for warnings or errors in Falco logs..."
+              if grep -q -i "WARNING\|ERROR\|CRITICAL" falco_logs.txt; then
+                echo "Warnings or errors found in Falco logs, will be recorded for issue creation"
+                echo "contains_warnings=true" >> $GITHUB_OUTPUT
+              else
+                echo "No warnings or errors found in Falco logs"
+                echo "contains_warnings=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "Error: falco_logs.txt is empty or not found"
+              echo "contains_warnings=true" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+            # Always exit successfully to continue workflow
+            docker ps -a
+            exit 0            
+        - name: Upload Falco logs as artifact
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: falco-logs
+            path: falco_logs.txt     
+        - name: Create GitHub issue if warnings or failures occur
+          run: |
+            if [ -f falco_logs.txt ]; then
+              # Lấy các dòng cảnh báo
+              WARNINGS=$(grep -i "WARNING\|ERROR\|CRITICAL" falco_logs.txt || echo "No warnings found in Falco logs")
+              # Mã hóa toàn bộ log Falco
+              FULL_FALCO_LOGS=$(cat falco_logs.txt | jq -s -R . || echo "Falco logs unavailable")
+              # Tạo JSON payload
+              jq -n \
+                --arg title "Falco Logs for CI Run ${{ github.run_id }}" \
+                --arg warnings "$WARNINGS" \
+                --arg falco_logs "$FULL_FALCO_LOGS" \
+                --arg repo "${{ github.repository }}" \
+                --arg run_id "${{ github.run_id }}" \
+                --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                '{
+                  title: $title,
+                  body: ("## Falco Issues for CI Run\n\n" +
+                        "### Warnings and Errors\n\n" +
+                        "```\n\($warnings)\n```\n\n" +
+                        "### Full Falco Logs\n\n" +
+                        "Due to size limits, full logs are available in the workflow artifact `container-logs`.\n\n" +
+                        "**Sample Falco Logs**:\n```\n\($falco_logs | .[0:1000])\n```\n\n" +
+                        "**Repository**: \($repo)\n" +
+                        "**Run ID**: \($run_id)\n" +
+                        "**Run URL**: \($run_url)\n\n" +
+                        "Please download the `container-logs` artifact to view full Falco logs.")
+                }' > issue_logs.json
+              curl -X POST \
+                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                -H "Content-Type: application/json" \
+                --data @issue_logs.json \
+                https://api.github.com/repos/${{ github.repository }}/issues || {
+                  echo "Failed to create GitHub issue"
+                  cat issue_logs.json
+                  exit 1
+                }
+            else
+              echo "No Falco logs available, skipping GitHub Issue creation"
+            fi          
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+        - name: Stop Falco 
+          run: docker stop falco || true
+        
+        #3
+        # - name: Setup Node.js for Dashboard
+        #   uses: actions/setup-node@v4
         #   with:
-        #     image-ref: 'vulnerable-app:latest'
-        #     scanners: 
-        #     exit-code: '0'
-        #     ignore-unfixed: true
-        #     severity: 'CRITICAL,HIGH'
-        #     format: 'sarif'
-        #     output: 'trivy-results.sarif'
-        # - name: Upload Trivy results
-        #   uses: github/codeql-action/upload-sarif@v3
-        #   with:
-        #     sarif_file: trivy-results.sarif
-
-        # - name: Start application from Docker container
+        #     node-version: '18'
+        #     cache: 'npm'
+        #     cache-dependency-path: dashboard/package.json
+        # - name: Install Dashboard dependencies
         #   run: |
-        #     docker run -d -p 8001:8001 --rm --name app-container vulnerable-app:latest npm start || {
-        #       echo "Failed to start app-container, checking logs..."
-        #       docker logs app-container > app_container_logs.txt 2>&1
-        #       cat app_container_logs.txt
-        #       exit 1
-        #     }
-        #     sleep 60
-        #     echo "Collecting app container logs..."
-        #     docker logs app-container > app-container_logs.txt 2>&1 || echo "Failed to collect app container logs"
-        #     echo "App container logs:"
-        #     cat app-container_logs.txt || echo "Failed to display app-container logs"
-        #     docker ps -a
-
-        #   # ZAP Scan
-        # - name: ZAP Scan
-        #   uses: zaproxy/action-full-scan@v0.12.0
-        #   with:
-        #       token: ${{ secrets.GITHUB_TOKEN }}
-        #       docker_name: 'ghcr.io/zaproxy/zaproxy:stable'
-        #       target: 'http://localhost:8001/'
-        #       cmd_options: '-a'
-        #       issue_title: 'ZAP Scan Report'
-
-        # - name: Check Falco logs for alerts
+        #     cd dashboard
+        #     npm install --verbose
+        #     ls -l node_modules/vite || echo "vite not installed"
+        #     ls -l node_modules/@vitejs/plugin-react || echo "@vitejs/plugin-react not installed"
+        # - name: Validate Dashboard package.json and vite.config.js
         #   run: |
-        #     echo "Collecting Falco logs..."
-        #     docker logs falco > falco_logs.txt 2>&1
-        #     if [ -f falco_logs.txt ]; then
-        #       echo "Full Falco logs:"
-        #       cat falco_logs.txt
-        #       echo "Checking for warnings or errors in Falco logs..."
-        #       if grep -q -i "WARNING\|ERROR\|CRITICAL" falco_logs.txt; then
-        #         echo "Warnings or errors found in Falco logs, will be recorded for issue creation"
-        #         echo "contains_warnings=true" >> $GITHUB_OUTPUT
-        #       else
-        #         echo "No warnings or errors found in Falco logs"
-        #         echo "contains_warnings=false" >> $GITHUB_OUTPUT
-        #       fi
-        #     else
-        #       echo "Error: falco_logs.txt is empty or not found"
-        #       echo "contains_warnings=true" >> $GITHUB_OUTPUT
+        #     echo "Validating dashboard/package.json..."
+        #     if [ ! -f dashboard/package.json ]; then
+        #       echo "Error: dashboard/package.json not found"
         #       exit 1
         #     fi
-        #     # Always exit successfully to continue workflow
-        #     docker ps -a
-        #     exit 0            
-        # - name: Upload Falco logs as artifact
-        #   if: always()
-        #   uses: actions/upload-artifact@v4
-        #   with:
-        #     name: falco-logs
-        #     path: falco_logs.txt     
-        # - name: Create GitHub issue if warnings or failures occur
+        #     cat dashboard/package.json
+        #     jq . dashboard/package.json || {
+        #       echo "Error: Invalid JSON in dashboard/package.json"
+        #       exit 1
+        #     }
+        #     echo "Validating dashboard/vite.config.js..."
+        #     if [ ! -f dashboard/vite.config.js ]; then
+        #       echo "Error: dashboard/vite.config.js not found"
+        #       exit 1
+        #     fi
+        #     cat dashboard/vite.config.js
+        #     cd dashboard
+        #     node -e "import('./vite.config.js').then(module => { if (!module.default) throw new Error('No default export'); }).catch(err => { console.error(err); process.exit(1); })" || {
+        #       echo "Error: Invalid JavaScript in dashboard/vite.config.js"
+        #       exit 1
+        #     }
+        #     echo "Validating dashboard/index.html..."
+        #     if [ ! -f index.html ]; then
+        #       echo "Error: dashboard/index.html not found"
+        #       exit 1
+        #     fi
+        #     cat index.html
+        # - name: Build Dashboard
         #   run: |
-        #     if [ -f falco_logs.txt ]; then
-        #       # Lấy các dòng cảnh báo
-        #       WARNINGS=$(grep -i "WARNING\|ERROR\|CRITICAL" falco_logs.txt || echo "No warnings found in Falco logs")
-        #       # Mã hóa toàn bộ log Falco
-        #       FULL_FALCO_LOGS=$(cat falco_logs.txt | jq -s -R . || echo "Falco logs unavailable")
-        #       # Tạo JSON payload
-        #       jq -n \
-        #         --arg title "Falco Logs for CI Run ${{ github.run_id }}" \
-        #         --arg warnings "$WARNINGS" \
-        #         --arg falco_logs "$FULL_FALCO_LOGS" \
-        #         --arg repo "${{ github.repository }}" \
-        #         --arg run_id "${{ github.run_id }}" \
-        #         --arg run_url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-        #         '{
-        #           title: $title,
-        #           body: ("## Falco Issues for CI Run\n\n" +
-        #                 "### Warnings and Errors\n\n" +
-        #                 "```\n\($warnings)\n```\n\n" +
-        #                 "### Full Falco Logs\n\n" +
-        #                 "Due to size limits, full logs are available in the workflow artifact `container-logs`.\n\n" +
-        #                 "**Sample Falco Logs**:\n```\n\($falco_logs | .[0:1000])\n```\n\n" +
-        #                 "**Repository**: \($repo)\n" +
-        #                 "**Run ID**: \($run_id)\n" +
-        #                 "**Run URL**: \($run_url)\n\n" +
-        #                 "Please download the `container-logs` artifact to view full Falco logs.")
-        #         }' > issue_logs.json
-        #       curl -X POST \
-        #         -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-        #         -H "Accept: application/vnd.github.v3+json" \
-        #         -H "Content-Type: application/json" \
-        #         --data @issue_logs.json \
-        #         https://api.github.com/repos/${{ github.repository }}/issues || {
-        #           echo "Failed to create GitHub issue"
-        #           cat issue_logs.json
-        #           exit 1
-        #         }
-        #     else
-        #       echo "No Falco logs available, skipping GitHub Issue creation"
-        #     fi          
+        #     cd dashboard
+        #     echo "VITE_GITHUB_TOKEN is set to: $VITE_GITHUB_TOKEN"
+        #     npm run build --verbose
+        #     ls -lR dist || echo "dist folder not created"
+        #     cat dist/index.html || echo "dist/index.html is empty or not found"
         #   env:
-        #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-        # - name: Stop Falco 
-        #   run: docker stop falco || true
-        
-        #2
-        - name: Setup Node.js for Dashboard
-          uses: actions/setup-node@v4
-          with:
-            node-version: '18'
-            cache: 'npm'
-            cache-dependency-path: dashboard/package.json
-        - name: Install Dashboard dependencies
-          run: |
-            cd dashboard
-            npm install --verbose
-            ls -l node_modules/vite || echo "vite not installed"
-            ls -l node_modules/@vitejs/plugin-react || echo "@vitejs/plugin-react not installed"
-        - name: Validate Dashboard package.json and vite.config.js
-          run: |
-            echo "Validating dashboard/package.json..."
-            if [ ! -f dashboard/package.json ]; then
-              echo "Error: dashboard/package.json not found"
-              exit 1
-            fi
-            cat dashboard/package.json
-            jq . dashboard/package.json || {
-              echo "Error: Invalid JSON in dashboard/package.json"
-              exit 1
-            }
-            echo "Validating dashboard/vite.config.js..."
-            if [ ! -f dashboard/vite.config.js ]; then
-              echo "Error: dashboard/vite.config.js not found"
-              exit 1
-            fi
-            cat dashboard/vite.config.js
-            cd dashboard
-            node -e "import('./vite.config.js').then(module => { if (!module.default) throw new Error('No default export'); }).catch(err => { console.error(err); process.exit(1); })" || {
-              echo "Error: Invalid JavaScript in dashboard/vite.config.js"
-              exit 1
-            }
-            echo "Validating dashboard/index.html..."
-            if [ ! -f index.html ]; then
-              echo "Error: dashboard/index.html not found"
-              exit 1
-            fi
-            cat index.html
-        - name: Build Dashboard
-          run: |
-            cd dashboard
-            echo "VITE_GITHUB_TOKEN is set to: $VITE_GITHUB_TOKEN"
-            npm run build --verbose
-            ls -lR dist || echo "dist folder not created"
-            cat dist/index.html || echo "dist/index.html is empty or not found"
-          env:
-            VITE_GITHUB_TOKEN: ${{ secrets.VITE_GITHUB_TOKEN }}
-        - name: Deploy Dashboard to GitHub Pages
-          uses: peaceiris/actions-gh-pages@v4
-          with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            publish_dir: ./dashboard/dist
-            force_orphan: true
-        - name: Debug GitHub Pages content
-          run: |
-            echo "Checking deployed files in dashboard/dist..."
-            ls -lR dashboard/dist
-            cat dashboard/dist/index.html || echo "dashboard/dist/index.html is empty or not found"
+        #     VITE_GITHUB_TOKEN: ${{ secrets.VITE_GITHUB_TOKEN }}
+        # - name: Deploy Dashboard to GitHub Pages
+        #   uses: peaceiris/actions-gh-pages@v4
+        #   with:
+        #     github_token: ${{ secrets.GITHUB_TOKEN }}
+        #     publish_dir: ./dashboard/dist
+        #     force_orphan: true
+        # - name: Debug GitHub Pages content
+        #   run: |
+        #     echo "Checking deployed files in dashboard/dist..."
+        #     ls -lR dashboard/dist
+        #     cat dashboard/dist/index.html || echo "dashboard/dist/index.html is empty or not found"
 
 
 

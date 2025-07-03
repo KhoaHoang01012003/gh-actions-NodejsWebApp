@@ -78,13 +78,14 @@ jobs:
         - name: Run Trivy vulnerability scanner
           uses: aquasecurity/trivy-action@master
           with:
-            image-ref: 'vulnerable-app:latest'
-            scanners: 
+            image-ref: 'vulnerable-app:latest' 
             exit-code: '0'
             ignore-unfixed: true
             severity: 'CRITICAL,HIGH'
             format: 'sarif'
             output: 'trivy-results.sarif'
+            scan-type: 'image'
+            scanners: 'vuln'
         - name: Upload Trivy results
           uses: github/codeql-action/upload-sarif@v3
           with:
